@@ -24,14 +24,22 @@ struct ContentView: View {
             }
         }
         .padding(.horizontal)
-        .blurScroll(10)
+        .blurScroll(10, blurHeight: 0.15, blurPosition: .top)
     }
 }
 
 //MARK: ViewModifier
-private struct BlurScroll: ViewModifier {
+struct BlurScroll: ViewModifier {
+    
+    enum BlurPosition {
+        case top
+        case bottom
+    }
     
     let blur: CGFloat
+    let blurHeight: CGFloat
+    let blurPosition: BlurPosition
+    
     let coordinateSpaceName = "scroll"
     
     @State private var scrollPosition: CGPoint = .zero
@@ -40,13 +48,13 @@ private struct BlurScroll: ViewModifier {
         
         let gradient = LinearGradient(stops: [
             .init(color: .white, location: 0.10),
-            .init(color: .clear, location: 0.25)],
+            .init(color: .clear, location: blurHeight)],
                                       startPoint: .bottom,
                                       endPoint: .top)
         
         let invertedGradient = LinearGradient(stops: [
             .init(color: .clear, location: 0.10),
-            .init(color: .white, location: 0.25)],
+            .init(color: .white, location: blurHeight)],
                                               startPoint: .bottom,
                                               endPoint: .top)
         
@@ -56,8 +64,7 @@ private struct BlurScroll: ViewModifier {
                     content
                         .mask(
                             VStack {
-                                invertedGradient
-                                
+                                (blurPosition == .bottom ? invertedGradient : gradient)
                                     .frame(height: topGeo.size.height, alignment: .top)
                                     .offset(y:  -scrollPosition.y )
                                 Spacer()
@@ -67,7 +74,8 @@ private struct BlurScroll: ViewModifier {
                     content
                         .blur(radius: 15)
                         .frame(height: topGeo.size.height, alignment: .top)
-                        .mask(gradient
+                        .mask(
+                            (blurPosition == .bottom ? gradient : invertedGradient)
                             .frame(height: topGeo.size.height)
                             .offset(y:  -scrollPosition.y )
                         )
@@ -98,9 +106,15 @@ private struct ScrollOffsetPreferenceKey: PreferenceKey {
 }
 
 //MARK: Extension
+
 extension View {
-    func blurScroll(_ blur: CGFloat) -> some View {
-        modifier(BlurScroll(blur: blur))
+    func blurScroll(_ blur: CGFloat,
+                    blurHeight: CGFloat = 0.25,
+                    blurPosition: BlurScroll.BlurPosition = .bottom ) -> some View {
+        
+        modifier(BlurScroll(blur: blur,
+                            blurHeight: blurPosition == .bottom ? blurHeight : 1 - blurHeight,
+                            blurPosition: blurPosition))
     }
 }
 
